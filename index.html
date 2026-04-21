@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retirement Decumulation Calculator — Dan & Megan</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="login-overlay" style="display: none;">
+      <div class="login-title">Private Access</div>
+      <div class="login-sub">Dan & Megan's Retirement Decumulation Calculator</div>
+      <input type="password" id="login-pass" placeholder="Enter Password" onkeydown="if(event.key==='Enter') checkPassword()">
+      <button class="btn btn-primary" onclick="checkPassword()" style="width: 100%; margin-top: 1rem; background: var(--accent); color: #fff;">Unlock Simulator</button>
+      <div id="login-error" style="color: #ff4d4d; font-size: 12px; margin-top: 10px; opacity: 0; transition: opacity 0.2s;">Incorrect Password. Try again.</div>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- MAIN -->
+    <div class="main">
+      <div class="page-header">
+        <div class="page-title">Retirement Decumulation Calculator</div>
+        <div class="page-sub" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <span>Dan &amp; Megan · Ontario · RRSP Meltdown First → Non-Reg → TFSA Last · Income Splitting Strategy</span>
+          <div class="history-controls" style="display:flex; gap:8px;">
+            <button id="undo-btn" class="btn btn-secondary" onclick="undo()" disabled style="padding: 4px 10px; font-size: 11px; opacity: 0.5;">⟲ Undo</button>
+            <button id="redo-btn" class="btn btn-secondary" onclick="redo()" disabled style="padding: 4px 10px; font-size: 11px; opacity: 0.5;">⟳ Redo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab" onclick="switchTab('planner',this)">📋 Planner</div>
+        <div class="tab active" onclick="switchTab('snapshot',this)">📊 Snapshot</div>
+        <div class="tab" onclick="switchTab('meltdown',this)">🔥 RRSP Meltdown</div>
+        <div class="tab" onclick="switchTab('projection',this)">📅 Year-by-Year</div>
+        <div class="tab" onclick="switchTab('strategy',this)">🎯 Tax Strategy</div>
+        <div class="tab" onclick="switchTab('whatif',this)">🔄 What-If</div>
+        <div class="tab" onclick="switchTab('networth',this)">📈 Net Worth</div>
+        <div class="tab" onclick="switchTab('notes',this)">📝 Notes</div>
+      </div>
+
+      <div class="pane" id="pane-planner">
+        <div class="planner-pane">
+          <div class="planner-grid">
+            <div class="planner-section">
+              <div class="person-tag dan-tag">DAN</div>
+              <div class="field-row">
+                <div class="field"><label>Current age</label><input type="number" id="danAge" value="52" min="40"
+                    max="75" oninput="update()"></div>
+                <div class="field"><label>CPP start age</label><input type="number" id="danCPPAge" value="65" min="60"
+                    max="70" oninput="update()"></div>
+              </div>
+              <div class="field"><label>DB Pension — base annual ($)</label><input type="number" id="danPension"
+                  value="80133" oninput="update()"></div>
+              <div class="field"><label>Bridge factor (%)</label><input type="number"
+                  id="danBridge" value="16.89" step="0.01" oninput="update()"></div>
+              <div class="field-row">
+                <div class="field"><label>CPP at 65 ($)</label><input type="number" id="danCPP" value="20166"
+                    oninput="update()"></div>
+                <div class="field"><label>OAS at 65 ($)</label><input type="number" id="danOAS" value="10680"
+                    oninput="update()"></div>
+              </div>
+            </div>
+
+            <div class="planner-section">
+              <div class="person-tag megan-tag">MEGAN</div>
+              <div class="field-row">
+                <div class="field"><label>Current age</label><input type="number" id="meganAge" value="50"
+                    min="40" max="75" oninput="update()"></div>
+                <div class="field"><label>Pension start age</label><input type="number" id="meganPensionAge" value="55"
+                    min="50" max="65" oninput="update()"></div>
+              </div>
+              <div class="field"><label>DB Pension — base annual ($)</label><input type="number" id="meganPension"
+                  value="18000" oninput="update()"></div>
+              <div class="field"><label>Bridge factor (%)</label><input type="number"
+                  id="meganBridge" value="5.5" step="0.01" oninput="update()"></div>
+              <div class="field-row">
+                <div class="field"><label>CPP at 65 ($)</label><input type="number" id="meganCPP" value="12768"
+                    oninput="update()"></div>
+                <div class="field"><label>OAS at 65 ($)</label><input type="number" id="meganOAS" value="11221"
+                    oninput="update()"></div>
+              </div>
+            </div>
+
+            <div class="planner-section">
+              <div class="ss-title">Projected Balances</div>
+              <div class="field"><label>RRSP ($)</label><input type="number" id="rrsp" value="192740" readonly></div>
+              <div class="field"><label>TFSA ($)</label><input type="number" id="tfsa" value="264216" readonly></div>
+              <div class="field"><label>Non-registered ($)</label><input type="number" id="nonReg" value="86439" readonly></div>
+            </div>
+
+            <div class="planner-section">
+              <div class="ss-title">Spending Goals</div>
+              <div class="field"><label>Annual net spending goal (today $)</label><input type="number" id="netGoal" value="108000" oninput="update()"></div>
+                  
+              <div class="field"><label>"Slow go" start age (Dan)</label><input type="number" id="slowGoAge" value="75" oninput="update()"></div>
+              <div class="field"><label>"Slow go" spending drop (%)</label><input type="number" id="slowGoDrop" value="10" step="0.1" oninput="update()"></div>
+
+              <div class="field"><label>"No go" start age (Dan)</label><input type="number" id="noGoAge" value="80" oninput="update()"></div>
+              <div class="field"><label>"No go" additional drop (%)</label><input type="number" id="noGoDrop" value="10" step="0.1" oninput="update()"></div>
+            </div>
+
+            <div class="planner-section">
+              <div class="ss-title">Assumptions</div>
+              <div class="field"><label>Investment return (%)</label><input type="number" id="retRate" value="5.0"
+                  step="0.1" oninput="update()"></div>
+              <div class="field"><label>Inflation rate (%)</label><input type="number" id="inflRate" value="2.5"
+                  step="0.1" oninput="update()"></div>
+              <div class="field-row">
+                <div class="field"><label>Dan Pension indexing (%)</label><input type="number" id="danPIdx" value="2.0"
+                    step="0.01" oninput="update()"></div>
+                <div class="field"><label>Megan Pension indexing (%)</label><input type="number" id="meganPIdx" value="2.0"
+                    step="0.01" oninput="update()"></div>
+              </div>
+              <div class="field"><label>Province</label>
+                <select id="province" onchange="update()">
+                  <option value="ON" selected>Ontario</option>
+                  <option value="BC">British Columbia</option>
+                  <option value="AB">Alberta</option>
+                  <option value="QC">Quebec</option>
+                  <option value="MB">Manitoba</option>
+                  <option value="SK">Saskatchewan</option>
+                </select>
+              </div>
+              <div class="field-row">
+                <div class="field"><label>Life expectancy</label><input type="number" id="lifeExp" value="90" min="75"
+                    max="105" oninput="update()"></div>
+                <div class="field"><label>Base year</label><input type="number" id="baseYear" value="2025"
+                    oninput="update()"></div>
+              </div>
+            </div>
+          </div>
+          <div
+            style="margin-top: 2rem; display: flex; gap: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem;">
+            <button class="recalc-btn" style="margin-top:0; width: auto; padding: 12px 24px;" onclick="update()">↻
+              Recalculate Simulation</button>
+            <button class="share-btn" style="margin-top:0; width: auto; padding: 12px 24px;" onclick="exportHTML()">⤓
+              Download / Save file</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane active" id="pane-snapshot">
+        <div class="phase-row" id="phase-row"></div>
+        <div class="cards" id="snap-cards"></div>
+        <div class="panel">
+          <div class="panel-title">Portfolio balance over time — RRSP depletes first, TFSA preserved longest</div>
+          <div class="chart-wrap" style="height:300px"><canvas id="portfolioChart"></canvas></div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:var(--rrsp)"></span>RRSP</span>
+            <span><span class="legend-dot" style="background:var(--tfsa)"></span>TFSA</span>
+            <span><span class="legend-dot" style="background:var(--nreg)"></span>Non-Registered</span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Annual income sources — all years</div>
+          <div class="chart-wrap" style="height:260px"><canvas id="incomeStackChart"></canvas></div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:#3a5a8c"></span>Dan pension (net of bridge)</span>
+            <span><span class="legend-dot" style="background:#8c3a6b"></span>Megan pension</span>
+            <span><span class="legend-dot" style="background:#2d5a3d"></span>CPP + OAS</span>
+            <span><span class="legend-dot" style="background:#c17d3c"></span>Portfolio withdrawals</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-meltdown">
+        <div class="highlight-box" id="meltdown-box"></div>
+        <div class="panel">
+          <div class="panel-title">🔥 RRSP Meltdown — Your Annual Withdrawal Plan</div>
+          <div class="panel-sub" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="panel-sub">Strategy: Withdraw RRSP up to the target bracket, then use Non-Reg (tax-free), then TFSA. Blue=RRSP, orange=Non-Reg, green=TFSA.</div>
+            <div id="status-box-meltdown" class="bracket-status-box"></div>
+          </div>
+          <div class="table-container">
+            <table id="meltdown-table"></table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">RRSP balance declining — target depletion before mandatory RRIF at 71</div>
+          <div class="chart-wrap" style="height:240px"><canvas id="rrspDeclineChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Dan vs Megan — taxable income after pension splitting</div>
+          <div class="panel-sub">Pension splitting equalizes household income and keeps both people in lower tax
+            brackets</div>
+          <div class="chart-wrap" style="height:240px"><canvas id="taxableIncomeChart"></canvas></div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:#3a5a8c"></span>Dan taxable income</span>
+            <span><span class="legend-dot" style="background:#8c3a6b"></span>Megan taxable income</span>
+            <span style="border-left:2px dashed #a32d2d;padding-left:8px;color:var(--danger)">$57,375 federal bracket
+              line</span>
+            <span style="border-left:2px dashed #854f0b;padding-left:8px;color:var(--warn)">$93,000 OAS clawback
+              threshold</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-projection">
+        <div class="panel">
+          <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Complete year-by-year projection</span>
+            <div id="status-box-projection" class="bracket-status-box"></div>
+          </div>
+          <div class="table-container">
+            <table id="proj-table"></table>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="pane" id="pane-strategy">
+        <div class="panel">
+          <div class="panel-title">Your personalized tax strategy</div>
+          <div id="strategy-content"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-networth">
+        <div class="panel">
+          <div class="panel-title">Net Worth Projection</div>
+          <div class="table-container">
+            <table id="networth-table"></table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Detailed Investment Breakdown</div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+            <div class="panel-sub" style="margin-bottom: 0; font-size: 0.9rem; color: var(--muted);">Update unit costs
+              for ETFs below to instantly recalculate current up-to-date values and projected dividends.</div>
+            <button class="btn btn-primary" onclick="showAddInvestmentModal()"
+              style="padding: 6px 12px; font-size: 0.8rem; background: var(--accent); color: #fff;">+ Add
+              Investment</button>
+          </div>
+          <div class="table-container">
+            <table id="investments-table" class="invest-table"></table>
+          </div>
+          <div id="investments-summary"
+            style="margin-top: 16px; padding: 16px; background: rgba(58,90,140,0.05); border: 1px solid rgba(58,90,140,0.1); border-radius: 8px; font-weight: 500; display: flex; justify-content: space-between;">
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-strategy">
+        <div class="panel">
+          <div class="panel-title">🎯 Tax Optimization Strategy</div>
+          <div class="panel-sub" style="margin-bottom: 20px;">How we are minimizing your lifetime tax bill.</div>
+          <div id="strategy-content" class="strategy-stack"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-networth">
+        <div class="panel">
+          <div class="panel-title">📈 Total Net Worth Projection (Portfolio Only)</div>
+          <div class="panel-sub" style="margin-bottom: 20px;">This table tracks your combined asset growth and depletion over time.</div>
+          <div class="table-container">
+            <table id="networth-table"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-whatif">
+        <div class="panel">
+          <div class="panel-title">Quick scenario buttons</div>
+          <div class="whatif-grid" id="whatif-grid"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Stress tests — how long does the TFSA last?</div>
+          <div class="stress-grid" id="stress-grid"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">OAS clawback watch</div>
+          <div id="oas-watch"></div>
+        </div>
+      </div>
+
+      <div class="pane" id="pane-notes">
+        <div class="panel" style="height: calc(100vh - 250px); display: flex; flex-direction: column;">
+          <div class="panel-title">📝 Personal Planning Notes</div>
+          <div class="panel-sub" style="margin-bottom: 12px;">These notes are saved automatically and private to your browser/device.</div>
+          <textarea id="userNotes" placeholder="Type reminders, future plans, or side-work notes here..." 
+            style="width: 100%; flex: 1; border: none; outline: none; font-family: inherit; font-size: 1.1rem; line-height: 1.6; resize: none; background: transparent; color: var(--text); padding: 10px;"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">Confirm Deletion</div>
+      <div class="modal-body" id="modal-body">
+        Are you sure you want to delete this investment? This action cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">No, Cancel</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="add-investment-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-title" id="add-inv-title">Add New Investment</div>
+      <div class="modal-body">
+        <div class="field-row" style="margin-bottom: 1rem;">
+          <div class="field" style="flex: 1;">
+            <label style="color: var(--muted); display: block; margin-bottom: 4px;">Account Type</label>
+            <select id="add-inv-type" onchange="toggleInvestmentFields()"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="RRSP">RRSP</option>
+              <option value="TFSA">TFSA</option>
+              <option value="Non-Reg">Non-Reg</option>
+              <option value="Cash">Cash</option>
+              <option value="GIC">GIC</option>
+            </select>
+          </div>
+          <div class="field" style="flex: 1;">
+            <label style="color: var(--muted); display: block; margin-bottom: 4px;">Investment Name</label>
+            <input type="text" id="add-inv-name" placeholder="Name (e.g. Scotiabank MF)"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div id="gic-fields" style="display: none; margin-bottom: 1rem;">
+          <div class="field-row" style="margin-bottom: 1rem;">
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Total Value on Maturity
+                ($)</label>
+              <input type="number" id="add-inv-gic-value" placeholder="10000"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Length of Investment</label>
+              <input type="text" id="add-inv-gic-length" placeholder="e.g. 1 Year"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+          </div>
+          <div class="field">
+            <label style="color: var(--muted); display: block; margin-bottom: 4px;">Maturity Date</label>
+            <input type="date" id="add-inv-gic-date"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+          </div>
+        </div>
+
+        <div id="cash-fields" style="display: none; margin-bottom: 1rem;">
+          <div class="field-row" style="margin-bottom: 1rem;">
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Institution</label>
+              <input type="text" id="add-inv-cash-inst" placeholder="e.g. EQ Bank"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Principal Amount ($)</label>
+              <input type="number" id="add-inv-cash-principal" placeholder="10000"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Investment Date</label>
+              <input type="date" id="add-inv-cash-date"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Interest Rate (%)</label>
+              <input type="number" step="0.01" id="add-inv-cash-rate" placeholder="4.50"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+
+        <div id="standard-fields">
+          <div class="field-row" style="margin-bottom: 1rem;">
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">ETF Ticker (Optional)</label>
+              <input type="text" id="add-inv-ticker" placeholder="e.g. VBAL.TO"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+            <div class="field" style="flex: 1;" id="shares-field">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Number of Shares</label>
+              <input type="number" step="0.0001" id="add-inv-shares" placeholder="0"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+          </div>
+          <div class="field-row" id="value-yield-fields">
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Current Value ($)</label>
+              <input type="number" id="add-inv-value" placeholder="0"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+            <div class="field" style="flex: 1;">
+              <label style="color: var(--muted); display: block; margin-bottom: 4px;">Dividend Yield (%)</label>
+              <input type="number" step="0.01" id="add-inv-yield" placeholder="0"
+                style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+        <button id="add-inv-btn" class="btn btn-primary" onclick="addInvestment()" style="background: var(--accent); color: #fff;">Add Investment</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
