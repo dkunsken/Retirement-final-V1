@@ -1299,24 +1299,41 @@ window.fetchLivePrices = async function (showToastFlag = false) {
     ];
 
     const fetchTicker = async (ticker) => {
-        console.log(`[Price Fetch] Attempting LIVE Yahoo for ${ticker}...`);
-        // Using the 'Raw' tunnel to get past the blocks
-        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&nocache=${Date.now()}`;
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        console.log(`[Price Fetch] Starting Direct AlphaVantage for: ${ticker}`);
+        const avTicker = ticker.replace(".TO", ".TRT");
+        const apiKey = "TRILMIFOIQKRZF9C";
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
 
+        try {
+            // DIRECT fetch (no proxy) - iPad will like this much better
+            const resp = await fetch(url);
+            const data = await resp.json();
+            const quote = data["Global Quote"];
+            
+            if (quote && quote["05. price"]) {
+                const price = parseFloat(quote["05. price"]);
+                if (!isNaN(price) && price > 0) {
+                    console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
+                    return price;
+                }
+            } else if (data["Note"]) {
+                console.warn("[Price Fetch] AlphaVantage limit reached (25/day).");
+            }
+        } catch (e) {
+            console.error(`[Price Fetch] Direct fetch failed for ${ticker}: ${e.message}`);
+        }
+
+        // BACKUP: If AlphaVantage fails, try the Yahoo Tunnel as a last resort
+        console.log(`[Price Fetch] AlphaVantage failed for ${ticker}. Trying Yahoo Tunnel...`);
+        const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&nocache=${Date.now()}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
         try {
             const resp = await fetch(proxyUrl);
             const data = await resp.json();
             const result = data?.quoteResponse?.result?.[0];
-            
-            if (result?.regularMarketPrice) {
-                const price = result.regularMarketPrice;
-                console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
-                return price;
-            }
-        } catch (e) {
-            console.warn(`[Price Fetch] Yahoo Tunnel failed for ${ticker}: ${e.message}`);
-        }
+            if (result?.regularMarketPrice) return result.regularMarketPrice;
+        } catch (e) { /* silent fail */ }
+
         return null;
     };
 
