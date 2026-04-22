@@ -217,38 +217,6 @@
       </div>
 
 
-      <div class="pane" id="pane-strategy">
-        <div class="panel">
-          <div class="panel-title">Your personalized tax strategy</div>
-          <div id="strategy-content"></div>
-        </div>
-      </div>
-
-      <div class="pane" id="pane-networth">
-        <div class="panel">
-          <div class="panel-title">Net Worth Projection</div>
-          <div class="table-container">
-            <table id="networth-table"></table>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-title">Detailed Investment Breakdown</div>
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-            <div class="panel-sub" style="margin-bottom: 0; font-size: 0.9rem; color: var(--muted);">Update unit costs
-              for ETFs below to instantly recalculate current up-to-date values and projected dividends.</div>
-            <button class="btn btn-primary" onclick="showAddInvestmentModal()"
-              style="padding: 6px 12px; font-size: 0.8rem; background: var(--accent); color: #fff;">+ Add
-              Investment</button>
-          </div>
-          <div class="table-container">
-            <table id="investments-table" class="invest-table"></table>
-          </div>
-          <div id="investments-summary"
-            style="margin-top: 16px; padding: 16px; background: rgba(58,90,140,0.05); border: 1px solid rgba(58,90,140,0.1); border-radius: 8px; font-weight: 500; display: flex; justify-content: space-between;">
-          </div>
-        </div>
-      </div>
 
       <div class="pane" id="pane-strategy">
         <div class="panel">
@@ -264,6 +232,30 @@
           <div class="panel-sub" style="margin-bottom: 20px;">This table tracks your combined asset growth and depletion over time.</div>
           <div class="table-container">
             <table id="networth-table"></table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Detailed Investment Breakdown</div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; gap: 10px;">
+            <div class="panel-sub" style="margin-bottom: 0; font-size: 0.9rem; color: var(--muted); flex: 1;">Update unit costs
+              for ETFs below to instantly recalculate current up-to-date values and projected dividends.</div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" onclick="fetchLivePrices(true)"
+                  style="padding: 6px 12px; font-size: 0.8rem; background: rgba(58,90,140,0.1); color: var(--accent);">↻ Refresh Prices</button>
+                <button class="btn btn-primary" onclick="showAddInvestmentModal()"
+                  style="padding: 6px 12px; font-size: 0.8rem; background: var(--accent); color: #fff;">+ Add
+                  Investment</button>
+              </div>
+              <div id="last-price-update" style="font-size: 0.7rem; color: var(--muted);"></div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table id="investments-table" class="invest-table"></table>
+          </div>
+          <div id="investments-summary"
+            style="margin-top: 16px; padding: 16px; background: rgba(58,90,140,0.05); border: 1px solid rgba(58,90,140,0.1); border-radius: 8px; font-weight: 500; display: flex; justify-content: space-between;">
           </div>
         </div>
       </div>

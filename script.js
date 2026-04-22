@@ -1265,7 +1265,7 @@ window.addInvestment = async function () {
 }
 
 // Automated live price engine (Background only)
-async function fetchLivePrices() {
+window.fetchLivePrices = async function (showToastFlag = false) {
     let updated = false;
 
     // Helper for fast-failing fetches
@@ -1286,20 +1286,66 @@ async function fetchLivePrices() {
         async (url) => {
             const resp = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`);
             return await resp.json();
+        },
+        async (url) => {
+            const resp = await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+            return await resp.json();
+        },
+        async (url) => {
+            // Backup proxy: thingproxy
+            const resp = await fetchWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`);
+            return await resp.json();
         }
     ];
 
-    const fetchTicker = async (ticker) => {
-        const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}`;
-        for (const engine of proxyEngines) {
-            try {
-                const data = await engine(yahooUrl);
-                if (data?.chart?.result?.[0]?.meta?.regularMarketPrice) {
-                    return data.chart.result[0].meta.regularMarketPrice;
+    const fetchTicker = (ticker) => {
+        return new Promise((resolve) => {
+            const avTicker = ticker.replace(".TO", ".TRT");
+            const apiKey = "demo"; // Still using demo for the test
+            const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
+            
+            const script = document.createElement('script');
+            const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            
+            window[callbackName] = function(data) {
+                if (window[callbackName]) {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    try {
+                        const contents = JSON.parse(data.contents);
+                        const price = parseFloat(contents["Global Quote"]?.["05. price"]);
+                        if (!isNaN(price) && price > 0) {
+                            console.log(`[Price Fetch] JSONP SUCCESS for ${ticker}: $${price}`);
+                            resolve(price);
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (e) {
+                        resolve(null);
+                    }
                 }
-            } catch (e) { /* silent fail to next engine */ }
-        }
-        return null;
+            };
+
+            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&callback=${callbackName}`;
+            script.onerror = () => {
+                if (window[callbackName]) {
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                }
+                resolve(null);
+            };
+            document.body.appendChild(script);
+
+            // Timeout after 2 seconds
+            setTimeout(() => {
+                if (window[callbackName]) {
+                    console.warn(`[Price Fetch] Timeout for ${ticker}`);
+                    delete window[callbackName];
+                    if (script.parentNode) document.body.removeChild(script);
+                    resolve(null);
+                }
+            }, 2000);
+        });
     };
 
     const groups = {};
@@ -1326,6 +1372,17 @@ async function fetchLivePrices() {
     if (updated) {
         saveState();
         renderInvestments();
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const el = document.getElementById('last-price-update');
+        if (el) el.innerText = `Last updated: ${timeStr}`;
+    }
+    if (showToastFlag) {
+        if (updated) {
+            showToast("Prices updated successfully.");
+        } else {
+            showToast("Could not reach finance servers. Try again in a moment.");
+        }
     }
 }
 
@@ -1335,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0); 
     update();
     renderInvestments();
-    fetchLivePrices();
+    setTimeout(() => fetchLivePrices(), 1000);
 
     // Auto-save and history on assumption change
     document.querySelectorAll('input[id], select[id], textarea[id]').forEach(inp => {
