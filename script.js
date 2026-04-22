@@ -940,10 +940,13 @@ function renderInvestments() {
         totalDiv += divs;
 
         let priceInput = '';
-        if (inv.isLive) {
-            priceInput = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><span class="live-tag" style="background:#2d5a3d;color:#fff;font-size:0.7rem;padding:2px 4px;border-radius:3px;font-weight:600;">LIVE</span> <span>${inv.price.toFixed(2)}</span></div>`;
-        } else if (inv.isETF) {
-            priceInput = `<input type="number" step="1" class="ovr-input" style="width:80px; padding:2px; height:auto; text-align:center" value="${inv.price}" onchange="updateInvestmentPrice(${index}, this.value)">`;
+        if (inv.isETF) {
+            const liveTag = inv.isLive ? `<span class="live-tag" style="background:#2d5a3d;color:#fff;font-size:0.6rem;padding:1px 3px;border-radius:3px;font-weight:600;margin-right:4px;">LIVE</span>` : '';
+            priceInput = `<div style="display:flex;align-items:center;justify-content:center;">
+                ${liveTag}
+                <input type="number" step="0.01" class="ovr-input" style="width:80px; padding:2px; height:auto; text-align:center" 
+                    value="${inv.price || 0}" onchange="updateInvestmentPrice(${index}, this.value)">
+            </div>`;
         } else {
             priceInput = `<span style="color:var(--muted)">-</span>`;
         }
