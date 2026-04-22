@@ -1286,48 +1286,21 @@ window.fetchLivePrices = async function (showToastFlag = false) {
         async (url) => {
             const resp = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(url)}`);
             return await resp.json();
-        },
-        async (url) => {
-            const resp = await fetchWithTimeout(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
-            return await resp.json();
-        },
-        async (url) => {
-            // Backup proxy: thingproxy
-            const resp = await fetchWithTimeout(`https://thingproxy.freeboard.io/fetch/${url}`);
-            return await resp.json();
         }
     ];
 
     const fetchTicker = async (ticker) => {
-        console.log(`[Price Fetch] Attempting iPad-friendly Yahoo for ${ticker}...`);
-        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&nocache=${Date.now()}`;
-        // Using a more 'invisible' proxy for iPad compatibility
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-
-        try {
-            const resp = await fetch(proxyUrl);
-            const data = await resp.json();
-            const result = data?.quoteResponse?.result?.[0];
-            
-            if (result?.regularMarketPrice) {
-                const price = result.regularMarketPrice;
-                console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
-                return price;
-            }
-        } catch (e) {
-            console.warn(`[Price Fetch] iPad proxy failed for ${ticker}: ${e.message}`);
+        const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d&nocache=${Date.now()}`;
+        for (const engine of proxyEngines) {
+            try {
+                const data = await engine(yahooUrl);
+                const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+                if (price && !isNaN(price)) {
+                    console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
+                    return price;
+                }
+            } catch (e) { /* silent fail to next engine */ }
         }
-        
-        // Backup: AlphaVantage Direct
-        const avTicker = ticker.replace(".TO", ".TRT");
-        const apiKey = "TRILMIFOIQKRZF9C";
-        const avUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
-        try {
-            const resp = await fetch(avUrl);
-            const data = await resp.json();
-            if (data["Global Quote"]?.["05. price"]) return parseFloat(data["Global Quote"]["05. price"]);
-        } catch (e) { /* silent fail */ }
-
         return null;
     };
 
