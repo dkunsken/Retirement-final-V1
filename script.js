@@ -1299,25 +1299,23 @@ window.fetchLivePrices = async function (showToastFlag = false) {
     ];
 
     const fetchTicker = async (ticker) => {
-        const avTicker = ticker.replace(".TO", ".TRT");
-        const apiKey = "TRILMIFOIQKRZF9C"; 
-        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
-        
-        console.log(`[Price Fetch] Direct request for ${ticker}...`);
-        
+        console.log(`[Price Fetch] Attempting LIVE Yahoo for ${ticker}...`);
+        // Using the 'Raw' tunnel to get past the blocks
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&nocache=${Date.now()}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+
         try {
-            const resp = await fetch(url);
+            const resp = await fetch(proxyUrl);
             const data = await resp.json();
+            const result = data?.quoteResponse?.result?.[0];
             
-            const price = parseFloat(data["Global Quote"]?.["05. price"]);
-            if (!isNaN(price) && price > 0) {
+            if (result?.regularMarketPrice) {
+                const price = result.regularMarketPrice;
                 console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
                 return price;
-            } else if (data["Note"]) {
-                console.warn("[Price Fetch] AlphaVantage limit reached. (Free keys allow 25 requests per day)");
             }
         } catch (e) {
-            console.error(`[Price Fetch] Direct fetch failed for ${ticker}: ${e.message}`);
+            console.warn(`[Price Fetch] Yahoo Tunnel failed for ${ticker}: ${e.message}`);
         }
         return null;
     };
