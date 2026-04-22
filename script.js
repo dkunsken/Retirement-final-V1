@@ -1298,54 +1298,28 @@ window.fetchLivePrices = async function (showToastFlag = false) {
         }
     ];
 
-    const fetchTicker = (ticker) => {
-        return new Promise((resolve) => {
-            const avTicker = ticker.replace(".TO", ".TRT");
-            const apiKey = "demo"; // Still using demo for the test
-            const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
+    const fetchTicker = async (ticker) => {
+        const avTicker = ticker.replace(".TO", ".TRT");
+        const apiKey = "TRILMIFOIQKRZF9C"; 
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${avTicker}&apikey=${apiKey}`;
+        
+        console.log(`[Price Fetch] Direct request for ${ticker}...`);
+        
+        try {
+            const resp = await fetch(url);
+            const data = await resp.json();
             
-            const script = document.createElement('script');
-            const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-            
-            window[callbackName] = function(data) {
-                if (window[callbackName]) {
-                    delete window[callbackName];
-                    if (script.parentNode) document.body.removeChild(script);
-                    try {
-                        const contents = JSON.parse(data.contents);
-                        const price = parseFloat(contents["Global Quote"]?.["05. price"]);
-                        if (!isNaN(price) && price > 0) {
-                            console.log(`[Price Fetch] JSONP SUCCESS for ${ticker}: $${price}`);
-                            resolve(price);
-                        } else {
-                            resolve(null);
-                        }
-                    } catch (e) {
-                        resolve(null);
-                    }
-                }
-            };
-
-            script.src = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&callback=${callbackName}`;
-            script.onerror = () => {
-                if (window[callbackName]) {
-                    delete window[callbackName];
-                    if (script.parentNode) document.body.removeChild(script);
-                }
-                resolve(null);
-            };
-            document.body.appendChild(script);
-
-            // Timeout after 2 seconds
-            setTimeout(() => {
-                if (window[callbackName]) {
-                    console.warn(`[Price Fetch] Timeout for ${ticker}`);
-                    delete window[callbackName];
-                    if (script.parentNode) document.body.removeChild(script);
-                    resolve(null);
-                }
-            }, 2000);
-        });
+            const price = parseFloat(data["Global Quote"]?.["05. price"]);
+            if (!isNaN(price) && price > 0) {
+                console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
+                return price;
+            } else if (data["Note"]) {
+                console.warn("[Price Fetch] AlphaVantage limit reached. (Free keys allow 25 requests per day)");
+            }
+        } catch (e) {
+            console.error(`[Price Fetch] Direct fetch failed for ${ticker}: ${e.message}`);
+        }
+        return null;
     };
 
     const groups = {};
