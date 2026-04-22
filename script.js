@@ -940,13 +940,10 @@ function renderInvestments() {
         totalDiv += divs;
 
         let priceInput = '';
-        if (inv.isETF) {
-            const liveTag = inv.isLive ? `<span class="live-tag" style="background:#2d5a3d;color:#fff;font-size:0.6rem;padding:1px 3px;border-radius:3px;font-weight:600;margin-right:4px;">LIVE</span>` : '';
-            priceInput = `<div style="display:flex;align-items:center;justify-content:center;">
-                ${liveTag}
-                <input type="number" step="0.01" class="ovr-input" style="width:80px; padding:2px; height:auto; text-align:center" 
-                    value="${inv.price || 0}" onchange="updateInvestmentPrice(${index}, this.value)">
-            </div>`;
+        if (inv.isLive) {
+            priceInput = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;"><span class="live-tag" style="background:#2d5a3d;color:#fff;font-size:0.7rem;padding:2px 4px;border-radius:3px;font-weight:600;">LIVE</span><input type="number" step="0.01" class="ovr-input" style="width:70px; padding:2px; height:auto; text-align:center" value="${inv.price.toFixed(2)}" onchange="updateInvestmentPrice(${index}, this.value)"></div>`;
+        } else if (inv.isETF) {
+            priceInput = `<input type="number" step="0.01" class="ovr-input" style="width:80px; padding:2px; height:auto; text-align:center" value="${inv.price}" onchange="updateInvestmentPrice(${index}, this.value)">`;
         } else {
             priceInput = `<span style="color:var(--muted)">-</span>`;
         }
@@ -1059,6 +1056,7 @@ window.updateInvestmentPrice = function (index, newPrice) {
     if (!isNaN(p) && p >= 0) {
         pushToHistory();
         investmentList[index].price = p;
+        investmentList[index].isLive = false; // Mark as manually set so auto-refresh won't overwrite
         saveState();
         renderInvestments();
     }
@@ -1268,7 +1266,7 @@ window.addInvestment = async function () {
 }
 
 // Automated live price engine (Background only)
-window.fetchLivePrices = async function (showToastFlag = false) {
+async function fetchLivePrices() {
     let updated = false;
 
     // Helper for fast-failing fetches
@@ -1293,14 +1291,12 @@ window.fetchLivePrices = async function (showToastFlag = false) {
     ];
 
     const fetchTicker = async (ticker) => {
-        const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d&nocache=${Date.now()}`;
+        const yahooUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}`;
         for (const engine of proxyEngines) {
             try {
                 const data = await engine(yahooUrl);
-                const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-                if (price && !isNaN(price)) {
-                    console.log(`[Price Fetch] SUCCESS for ${ticker}: $${price}`);
-                    return price;
+                if (data?.chart?.result?.[0]?.meta?.regularMarketPrice) {
+                    return data.chart.result[0].meta.regularMarketPrice;
                 }
             } catch (e) { /* silent fail to next engine */ }
         }
@@ -1331,17 +1327,6 @@ window.fetchLivePrices = async function (showToastFlag = false) {
     if (updated) {
         saveState();
         renderInvestments();
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const el = document.getElementById('last-price-update');
-        if (el) el.innerText = `Last updated: ${timeStr}`;
-    }
-    if (showToastFlag) {
-        if (updated) {
-            showToast("Prices updated successfully.");
-        } else {
-            showToast("Could not reach finance servers. Try again in a moment.");
-        }
     }
 }
 
@@ -1351,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo(0, 0); 
     update();
     renderInvestments();
-    setTimeout(() => fetchLivePrices(), 1000);
+    fetchLivePrices();
 
     // Auto-save and history on assumption change
     document.querySelectorAll('input[id], select[id], textarea[id]').forEach(inp => {
